@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: Investment
+  datasource:
+    url: jdbc:mysql://localhost:3306/investment?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  # Redis配置（预留，暂时注释）
+  # redis:
+  #   host: localhost
+  #   port: 6379
+  #   password:
+  #   database: 0
+  #   timeout: 5000ms
+
+mybatis-plus:
+  type-aliases-package: com.dq.investment.entity
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 开发环境打印SQL
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml  # 如果使用XML，可以指定
+#  mapper-locations: classpath:mapper/*.xml #仅匹配 classpath:mapper 目录下直接存在的所有.xml 文件（单层）
+
+
+logging:
+  config: classpath:log4j2.xml
