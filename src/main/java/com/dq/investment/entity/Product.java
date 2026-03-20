@@ -22,6 +22,14 @@ public class Product {
     private String status;
     private String riskLevel;
 
+    // 新增指标字段
+    private BigDecimal annualizedReturn; // 累计年化收益率
+    private BigDecimal maxDrawdown;      // 最大回撤(%)
+    private String liquidity;            // 流动性（高/中/低）
+    private BigDecimal sharpeRatio;      // 夏普比率
+    private BigDecimal feeRate;          // 综合费率(%)
+
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

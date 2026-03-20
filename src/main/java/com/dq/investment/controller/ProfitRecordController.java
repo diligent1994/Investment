@@ -21,14 +21,33 @@ public class ProfitRecordController {
         return Result.success(profitRecordService.pageList(pageNum, pageSize, productId));
     }
 
+    /**
+     * 新增/更新收益记录（自动计算指标）
+     */
     @PostMapping
     public Result<Boolean> add(@RequestBody ProfitRecord profitRecord) {
-        return profitRecordService.save(profitRecord) ? Result.success("新增成功", true) : Result.error("新增失败");
+        return profitRecordService.saveWithCalculate(profitRecord)
+                ? Result.success("新增成功并计算指标", true)
+                : Result.error("新增失败");
     }
 
     @PutMapping
     public Result<Boolean> update(@RequestBody ProfitRecord profitRecord) {
-        return profitRecordService.updateById(profitRecord) ? Result.success("更新成功", true) : Result.error("更新失败");
+        return profitRecordService.saveWithCalculate(profitRecord)
+                ? Result.success("更新成功并计算指标", true)
+                : Result.error("更新失败");
+    }
+
+    /**
+     * 手动计算单条记录指标
+     */
+    @PostMapping("/calculate/{productId}/{recordId}")
+    public Result<Boolean> calculateSingleRecord(
+            @PathVariable Long productId,
+            @PathVariable Long recordId) {
+        return profitRecordService.calculateSingleRecord(productId, recordId)
+                ? Result.success("手动计算指标成功", true)
+                : Result.error("计算失败");
     }
 
     @DeleteMapping("/{id}")

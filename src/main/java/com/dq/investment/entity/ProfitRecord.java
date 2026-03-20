@@ -18,6 +18,13 @@ public class ProfitRecord {
     private BigDecimal profitAmount;       // 收益金额
     private BigDecimal profitRate;          // 收益率（%），可选
 
+    // 新增字段：支持申赎+动态指标
+    private String transactionType;      // 交易类型：申购/赎回/收益更新
+    private BigDecimal transactionAmount;// 申赎金额（申购+，赎回-）
+    private BigDecimal annualizedReturn; // 截至本次的年化收益率(%)
+    private BigDecimal maxDrawdown;      // 截至本次的最大回撤(%)
+    private BigDecimal sharpeRatio;      // 截至本次的夏普比率
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
