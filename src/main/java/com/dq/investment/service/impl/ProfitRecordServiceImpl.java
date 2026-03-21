@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Service
@@ -21,6 +22,14 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
 
     @Autowired
     private ProductMapper productMapper;
+
+    @Override
+    public List<ProfitRecord> listByProductId(Long productId) {
+        LambdaQueryWrapper<ProfitRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProfitRecord::getProductId, productId)
+                .orderByAsc(ProfitRecord::getRecordDate); // 按日期排序
+        return list(wrapper);
+    }
 
     @Override
     public PageResult<ProfitRecord> pageList(Integer pageNum, Integer pageSize, Long productId) {
@@ -39,6 +48,15 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
      */
     @Override
     public boolean saveWithCalculate(ProfitRecord profitRecord) {
+        Long productId = profitRecord.getProductId();
+        Product product = productMapper.selectById(productId);
+        BigDecimal investmentAmount = product.getInvestAmount();
+        if(!BigDecimal.ZERO.equals(profitRecord.getTransactionAmount())){
+            investmentAmount = investmentAmount.add(profitRecord.getTransactionAmount());
+        }
+        BigDecimal profitRate = profitRecord.getProfitAmount().divide(investmentAmount, 4, RoundingMode.HALF_UP);
+        profitRecord.setProfitRate(profitRate);
+
         // 1. 保存当前记录
         boolean saveFlag = this.saveOrUpdate(profitRecord);
         if (!saveFlag) {
@@ -46,7 +64,7 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
         }
 
         // 2. 获取该产品的所有记录
-        Long productId = profitRecord.getProductId();
+
         LambdaQueryWrapper<ProfitRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProfitRecord::getProductId, productId);
         List<ProfitRecord> allRecords = this.list(wrapper);
@@ -63,11 +81,11 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
         this.updateById(profitRecord);
 
         // 5. 更新产品表的累计指标
-        Product product = productMapper.selectById(productId);
         if (product != null) {
             product.setAnnualizedReturn(annualized);
             product.setMaxDrawdown(maxDrawdown);
             product.setSharpeRatio(sharpe);
+            product.setInvestAmount(investmentAmount);
             productMapper.updateById(product);
         }
 

@@ -41,4 +41,11 @@ public class ProductController {
     public Result<Product> getById(@PathVariable Long id) {
         return Result.success(productService.getById(id));
     }
+
+    // 新增：计算指定产品的最新指标
+    @PostMapping("/calculate-indicators/{productId}")
+    public Result<String> calculateIndicators(@PathVariable Long productId) {
+        productService.calculateAndUpdateIndicators(productId);
+        return Result.success("指标计算成功",null);
+    }
 }
