@@ -41,6 +41,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         buyRecord.setProductId(product.getId()); // 关联新产品ID
         buyRecord.setTransactionType("申购"); // 交易类型：申购
         buyRecord.setTransactionAmount(product.getInvestAmount()); // 申购金额=产品投资金额
+        buyRecord.setTotalAmount(product.getInvestAmount()); // 持仓总金额=产品投资金额
         buyRecord.setProfitAmount(BigDecimal.ZERO); // 申购时无收益
         buyRecord.setProfitRate(BigDecimal.ZERO); // 申购时收益率0
         buyRecord.setRecordDate(product.getBuyDate()); // 申购日期=产品购买日期
@@ -82,6 +83,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         product.setAnnualizedReturn(annualRate);
         product.setMaxDrawdown(maxDrawdown);
         product.setSharpeRatio(sharpeRatio);
+        product.setInvestAmount(records.stream()
+                // 提取每个元素的 transactionAmount，空值默认0（避免空指针）
+                .map(record -> record.getTransactionAmount() == null ? BigDecimal.ZERO : record.getTransactionAmount())
+                // 累加：初始值ZERO，累加器BigDecimal.add
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
         updateById(product);
     }
 

@@ -50,12 +50,8 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
     public boolean saveWithCalculate(ProfitRecord profitRecord) {
         Long productId = profitRecord.getProductId();
         Product product = productMapper.selectById(productId);
-        BigDecimal investmentAmount = product.getInvestAmount();
-        if(!BigDecimal.ZERO.equals(profitRecord.getTransactionAmount())){
-            investmentAmount = investmentAmount.add(profitRecord.getTransactionAmount());
-        }
-        BigDecimal profitRate = profitRecord.getProfitAmount().divide(investmentAmount, 4, RoundingMode.HALF_UP);
-        profitRecord.setProfitRate(profitRate);
+        //申赎要改变持仓成本
+        CalculateUtil.UpdateProductRecord(product, profitRecord);
 
         // 1. 保存当前记录
         boolean saveFlag = this.saveOrUpdate(profitRecord);
@@ -85,7 +81,6 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
             product.setAnnualizedReturn(annualized);
             product.setMaxDrawdown(maxDrawdown);
             product.setSharpeRatio(sharpe);
-            product.setInvestAmount(investmentAmount);
             productMapper.updateById(product);
         }
 
@@ -101,9 +96,9 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
         LambdaQueryWrapper<ProfitRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProfitRecord::getProductId, productId);
         List<ProfitRecord> allRecords = this.list(wrapper);
-
+        Product product = productMapper.selectById(productId);
         // 计算单条记录指标
-        ProfitRecord updatedRecord = CalculateUtil.calculateSingleRecord(productId, recordId, allRecords);
+        ProfitRecord updatedRecord = CalculateUtil.calculateSingleRecord(product, recordId, allRecords);
         if (updatedRecord == null) {
             return false;
         }

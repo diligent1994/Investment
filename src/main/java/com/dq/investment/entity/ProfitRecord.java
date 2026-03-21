@@ -13,14 +13,16 @@ public class ProfitRecord {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    //录入信息
     private Long productId;               // 关联产品ID
-    private LocalDate recordDate;          // 收益日期
-    private BigDecimal profitAmount;       // 收益金额
-    private BigDecimal profitRate;          // 收益率（%），可选
-
-    // 新增字段：支持申赎+动态指标
+    private LocalDate recordDate;          // 日期
     private String transactionType;      // 交易类型：申购/赎回/收益更新
     private BigDecimal transactionAmount;// 申赎金额（申购+，赎回-）
+    private BigDecimal totalAmount;      //  截至本次的持仓总市值
+
+    //自动计算的字段
+    private BigDecimal profitAmount;       // 截至本次的收益金额
+    private BigDecimal profitRate;          // 截至本次的收益率（%）
     private BigDecimal annualizedReturn; // 截至本次的年化收益率(%)
     private BigDecimal maxDrawdown;      // 截至本次的最大回撤(%)
     private BigDecimal sharpeRatio;      // 截至本次的夏普比率

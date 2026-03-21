@@ -15,7 +15,7 @@ public class Product {
 
     private String name;                // 产品名称
     private String type;                 // 产品类型：基金、股票、理财、存款等
-    private BigDecimal investAmount;           // 购买金额
+    private BigDecimal investAmount;           // 成本
     private LocalDate buyDate;       // 购买日期
     private BigDecimal expectedYield; // 预期年化收益率（%）
     private String description;           // 备注
