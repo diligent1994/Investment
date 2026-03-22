@@ -71,8 +71,8 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
         BigDecimal sharpe = CalculateUtil.calculateSharpeRatio(annualized, allRecords);
 
         // 4. 更新当前记录的指标
-        profitRecord.setAnnualizedReturn(annualized);
-        profitRecord.setMaxDrawdown(maxDrawdown);
+        profitRecord.setAnnualizedReturn(annualized.multiply(CalculateUtil.PERCENT));
+        profitRecord.setMaxDrawdown(maxDrawdown.multiply(CalculateUtil.PERCENT));
         profitRecord.setSharpeRatio(sharpe);
         this.updateById(profitRecord);
 
