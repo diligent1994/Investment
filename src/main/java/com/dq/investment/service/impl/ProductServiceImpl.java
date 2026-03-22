@@ -75,13 +75,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         }
 
         // 3. 调用工具类计算指标（复用之前的精准年化收益率工具）
-        BigDecimal annualRate = CalculateUtil.calculateAnnualizedReturnByRecords(records);
-        BigDecimal maxDrawdown = CalculateUtil.calculateMaxDrawdown(records);
-        BigDecimal sharpeRatio = CalculateUtil.calculateSharpeRatio(annualRate, records);
+        List<ProfitRecord> sortedRecords = CalculateUtil.sortRecordsByDate(records);
+        BigDecimal annualRate = CalculateUtil.calculateAnnualizedReturnByRecords(sortedRecords);
+        BigDecimal maxDrawdown = CalculateUtil.calculateMaxDrawdown(sortedRecords);
+        BigDecimal sharpeRatio = CalculateUtil.calculateSharpeRatio(annualRate, sortedRecords);
 
         // 4. 更新产品指标
-        product.setAnnualizedReturn(annualRate);
-        product.setMaxDrawdown(maxDrawdown);
+        product.setAnnualizedReturn(annualRate.multiply(CalculateUtil.PERCENT));
+        product.setMaxDrawdown(maxDrawdown.multiply(CalculateUtil.PERCENT));
         product.setSharpeRatio(sharpeRatio);
         product.setInvestAmount(records.stream()
                 // 提取每个元素的 transactionAmount，空值默认0（避免空指针）

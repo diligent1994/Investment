@@ -9,15 +9,14 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 理财产品收益计算工具类
- * 修正点：
- * 1. 日IRR返回小数形式（非百分比）
- * 2. 年化收益率使用复利公式：(1 + 日IRR)^365 - 1
- * 3. 修复字段类型不匹配问题
- * 4. 完善夏普比率和最大回撤计算逻辑
+ * 优化说明：
+ * 1. 年化收益率改为复利公式 (1+日IRR)^365 - 1
+ * 2. 改进 IRR 求解的初始猜测（尝试正负值）
+ * 3. 夏普比率基于市值序列计算期间收益率，并年化波动率
+ * 4. 添加字段完整性校验
  */
 @Slf4j
 public class CalculateUtil {
@@ -73,19 +72,18 @@ public class CalculateUtil {
     public static List<ProfitRecord> sortRecordsByDate(List<ProfitRecord> records) {
         validateProfitRecordFields(records);
         List<ProfitRecord> sortedRecords = new ArrayList<>(records);
-        Collections.sort(sortedRecords, Comparator.comparing(ProfitRecord::getRecordDate));
+        sortedRecords.sort(Comparator.comparing(ProfitRecord::getRecordDate));
         return sortedRecords;
     }
 
     /**
      * 计算日IRR（内部收益率）
      *
-     * @param records 产品收益记录列表（需按日期排序）
+     * @param sortedRecords 产品收益记录列表（需按日期排序）
      * @return 日IRR（小数形式，如0.0001122表示日IRR为0.01122%）
      */
-    public static BigDecimal calculateDailyIRR(List<ProfitRecord> records) {
-        validateProfitRecordFields(records);
-        List<ProfitRecord> sortedRecords = sortRecordsByDate(records);
+    public static BigDecimal calculateDailyIRR(List<ProfitRecord> sortedRecords) {
+        validateProfitRecordFields(sortedRecords);
         LocalDate firstDate = sortedRecords.get(0).getRecordDate();
 
         // 构建现金流和时间间隔（天数）
@@ -99,29 +97,46 @@ public class CalculateUtil {
             BigDecimal cashFlow = record.getTransactionAmount().negate();
             cashFlows.add(cashFlow);
         }
-        // 最后一条记录的总市值作为最终现金流（收入）
+        // 最后一条记录加上期末市值（视为最终赎回）
         ProfitRecord lastRecord = sortedRecords.get(sortedRecords.size() - 1);
         cashFlows.set(cashFlows.size() - 1, cashFlows.get(cashFlows.size() - 1).add(lastRecord.getTotalAmount()));
 
-        // 牛顿迭代法求解IRR
-        BigDecimal guess = new BigDecimal("0.0001"); // 初始猜测值
-        BigDecimal irr = guess;
+        // 尝试正负初始猜测，提高收敛性
+        BigDecimal irr = null;
+        for (double guess : new double[]{0.0001, -0.0001}) {
+            irr = newtonRaphson(guess, cashFlows, daysList);
+            if (irr != null) {
+                break;
+            }
+        }
+        if (irr == null) {
+            log.warn("IRR 求解未收敛，返回0");
+            return BigDecimal.ZERO;
+        }
+        return irr.setScale(8, RoundingMode.HALF_UP); // 返回百分比形式的日 IRR
+    }
+
+    private static BigDecimal newtonRaphson(double initialGuess, List<BigDecimal> cashFlows, List<Integer> daysList) {
+        BigDecimal irr = BigDecimal.valueOf(initialGuess);
         for (int i = 0; i < MAX_ITERATION; i++) {
             BigDecimal npv = calculateNPV(irr, cashFlows, daysList);
             BigDecimal npvDerivative = calculateNPVDerivative(irr, cashFlows, daysList);
 
             if (npvDerivative.abs().compareTo(IRR_PRECISION) < 0) {
-                break; // 导数接近0，停止迭代
+                return null; // 导数接近0，停止迭代
             }
 
             BigDecimal newIrr = irr.subtract(npv.divide(npvDerivative, 10, RoundingMode.HALF_UP));
             if (newIrr.subtract(irr).abs().compareTo(IRR_PRECISION) < 0) {
-                irr = newIrr;
-                break; // 收敛，停止迭代
+                return newIrr; // 收敛，停止迭代
             }
             irr = newIrr;
+            // 防止发散
+            if (irr.abs().compareTo(new BigDecimal("10")) > 0) {
+                return null;
+            }
         }
-        return irr.setScale(8, RoundingMode.HALF_UP); // 返回小数形式（非百分比）
+        return null;
     }
 
     /**
@@ -182,12 +197,11 @@ public class CalculateUtil {
      * 计算最大回撤（基于净值序列）
      * 最大回撤 = (历史峰值 - 后续谷值) / 历史峰值 * 100%
      *
-     * @param records 产品所有收益记录（需按日期排序）
+     * @param sortedRecords 产品所有收益记录（需按日期排序）
      * @return 最大回撤（百分比形式，如-5.2表示最大回撤5.2%）
      */
-    public static BigDecimal calculateMaxDrawdown(List<ProfitRecord> records) {
-        validateProfitRecordFields(records);
-        List<ProfitRecord> sortedRecords = sortRecordsByDate(records);
+    public static BigDecimal calculateMaxDrawdown(List<ProfitRecord> sortedRecords) {
+        validateProfitRecordFields(sortedRecords);
         if (sortedRecords.size() < 2) {
             log.warn("计算最大回撤缺少数据：产品历史市值序列（需至少2条ProfitRecord记录）");
             return null;
@@ -239,9 +253,11 @@ public class CalculateUtil {
             return BigDecimal.ZERO;
         }
 
-        // 夏普比率 = (年化收益率 - 无风险收益率) / 波动率
-        BigDecimal sharpe = annualizedReturn.subtract(RISK_FREE_RATE)
-                .divide(stdDev, 4, RoundingMode.HALF_UP);
+        // 年化波动率 = 日波动率 * sqrt(252)（假设252个交易日）
+        BigDecimal annualVolatility = stdDev.multiply(BigDecimal.valueOf(Math.sqrt(252))).setScale(6, RoundingMode.HALF_UP);
+
+        // 夏普比率 = (年化收益率 - 无风险利率) / 年化波动率
+        BigDecimal sharpe = annualizedReturn.subtract(RISK_FREE_RATE).divide(annualVolatility, 4, RoundingMode.HALF_UP);
         return sharpe.setScale(4, RoundingMode.HALF_UP);
     }
 
@@ -250,6 +266,9 @@ public class CalculateUtil {
      */
     private static List<BigDecimal> calculateDailyReturns(List<ProfitRecord> records) {
         List<BigDecimal> dailyReturns = new ArrayList<>();
+        // 计算期间收益率（简单收益率）及其天数
+        List<BigDecimal> periodReturns = new ArrayList<>();
+        List<Integer> periodDays = new ArrayList<>();
         ProfitRecord previous = null;
 
         for (ProfitRecord record : records) {
@@ -262,8 +281,22 @@ public class CalculateUtil {
             BigDecimal returnRate = record.getTotalAmount()
                     .subtract(previous.getTotalAmount())
                     .divide(previous.getTotalAmount(), 6, RoundingMode.HALF_UP);
-            dailyReturns.add(returnRate);
+
+            periodReturns.add(returnRate);
+            long days = ChronoUnit.DAYS.between(previous.getRecordDate(), record.getRecordDate());
+            periodDays.add((int) days);
             previous = record;
+        }
+
+        // 计算年化波动率：先将期间收益率折算为日收益率（假设线性），再计算日标准差，最后年化
+        for (int i = 0; i < periodReturns.size(); i++) {
+            BigDecimal periodRet = periodReturns.get(i);
+            int days = periodDays.get(i);
+            if (days > 0) {
+                // 简单近似：日收益率 = 期间收益率 / 天数
+                BigDecimal dailyRet = periodRet.divide(new BigDecimal(days), 10, RoundingMode.HALF_UP);
+                dailyReturns.add(dailyRet);
+            }
         }
         return dailyReturns;
     }
@@ -276,15 +309,15 @@ public class CalculateUtil {
             return BigDecimal.ZERO;
         }
 
-        // 计算均值
+        // 计算日收益率均值
         BigDecimal sum = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal mean = sum.divide(new BigDecimal(values.size()), 6, RoundingMode.HALF_UP);
+        BigDecimal mean = sum.divide(new BigDecimal(values.size()), 10, RoundingMode.HALF_UP);
 
         // 计算方差
         BigDecimal variance = values.stream()
                 .map(v -> v.subtract(mean).pow(2))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(new BigDecimal(values.size() - 1), 6, RoundingMode.HALF_UP);
+                .divide(new BigDecimal(values.size() - 1), 10, RoundingMode.HALF_UP);
 
         // 标准差 = sqrt(方差)
         return BigDecimal.valueOf(Math.sqrt(variance.doubleValue()));
@@ -326,12 +359,13 @@ public class CalculateUtil {
         LocalDate targetDate = targetRecord.getRecordDate();
         List<ProfitRecord> recordsToTarget = allRecords.stream()
                 .filter(r -> r.getRecordDate().isBefore(targetDate) || r.getRecordDate().isEqual(targetDate))
-                .collect(Collectors.toList());
+                .toList();
 
         // 计算指标
-        BigDecimal annualized = calculateAnnualizedReturnByRecords(recordsToTarget);
-        BigDecimal maxDrawdown = calculateMaxDrawdown(recordsToTarget);
-        BigDecimal sharpe = calculateSharpeRatio(annualized, recordsToTarget);
+        List<ProfitRecord> sortedRecords = CalculateUtil.sortRecordsByDate(recordsToTarget);
+        BigDecimal annualized = calculateAnnualizedReturnByRecords(sortedRecords);
+        BigDecimal maxDrawdown = calculateMaxDrawdown(sortedRecords);
+        BigDecimal sharpe = calculateSharpeRatio(annualized, sortedRecords);
 
         // 更新当前记录
         targetRecord.setAnnualizedReturn(annualized.multiply(PERCENT));

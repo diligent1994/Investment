@@ -66,9 +66,10 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
         List<ProfitRecord> allRecords = this.list(wrapper);
 
         // 3. 计算产品级指标
-        BigDecimal annualized = CalculateUtil.calculateAnnualizedReturnByRecords(allRecords);
-        BigDecimal maxDrawdown = CalculateUtil.calculateMaxDrawdown(allRecords);
-        BigDecimal sharpe = CalculateUtil.calculateSharpeRatio(annualized, allRecords);
+        List<ProfitRecord> sortedRecords = CalculateUtil.sortRecordsByDate(allRecords);
+        BigDecimal annualized = CalculateUtil.calculateAnnualizedReturnByRecords(sortedRecords);
+        BigDecimal maxDrawdown = CalculateUtil.calculateMaxDrawdown(sortedRecords);
+        BigDecimal sharpe = CalculateUtil.calculateSharpeRatio(annualized, sortedRecords);
 
         // 4. 更新当前记录的指标
         profitRecord.setAnnualizedReturn(annualized.multiply(CalculateUtil.PERCENT));
@@ -78,8 +79,8 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
 
         // 5. 更新产品表的累计指标
         if (product != null) {
-            product.setAnnualizedReturn(annualized);
-            product.setMaxDrawdown(maxDrawdown);
+            product.setAnnualizedReturn(annualized.multiply(CalculateUtil.PERCENT));
+            product.setMaxDrawdown(maxDrawdown.multiply(CalculateUtil.PERCENT));
             product.setSharpeRatio(sharpe);
             productMapper.updateById(product);
         }
