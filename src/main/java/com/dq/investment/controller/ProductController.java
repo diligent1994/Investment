@@ -7,19 +7,25 @@ import com.dq.investment.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * @author hasee
+ */
 @RestController
 @RequestMapping("/api/product")
 public class ProductController {
     @Autowired
     private ProductService productService;
 
+    // 核心修改：新增sortField、sortDir参数
     @GetMapping("/page")
     public Result<PageResult<Product>> pageList(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String type) {
-        return Result.success(productService.pageList(pageNum, pageSize, name, type));
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String sortField, // 新增：排序字段
+            @RequestParam(defaultValue = "asc") String sortDir) { // 新增：排序方向
+        return Result.success(productService.pageList(pageNum, pageSize, name, type, sortField, sortDir));
     }
 
     @PostMapping

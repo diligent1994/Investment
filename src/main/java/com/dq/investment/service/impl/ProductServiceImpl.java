@@ -1,6 +1,7 @@
 package com.dq.investment.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.dq.investment.common.PageResult;
@@ -16,15 +17,47 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * @author hasee
+ */
 @Service
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
 
     @Autowired
     private ProfitRecordService profitRecordService;
+
+    // 排序字段白名单 + Lambda 映射
+    public static final Map<String, SFunction<Product, ?>> SORT_FIELD_LAMBDA_MAP;
+
+    static {
+        SORT_FIELD_LAMBDA_MAP = new HashMap<>(16);
+        // 基础字段
+        SORT_FIELD_LAMBDA_MAP.put("id", Product::getId);
+        SORT_FIELD_LAMBDA_MAP.put("name", Product::getName);
+        SORT_FIELD_LAMBDA_MAP.put("type", Product::getType);
+        SORT_FIELD_LAMBDA_MAP.put("investAmount", Product::getInvestAmount);
+        SORT_FIELD_LAMBDA_MAP.put("buyDate", Product::getBuyDate);
+        SORT_FIELD_LAMBDA_MAP.put("expectedYield", Product::getExpectedYield);
+        SORT_FIELD_LAMBDA_MAP.put("description", Product::getDescription);
+        SORT_FIELD_LAMBDA_MAP.put("status", Product::getStatus);
+        SORT_FIELD_LAMBDA_MAP.put("riskLevel", Product::getRiskLevel);
+
+        // 新增指标字段
+        SORT_FIELD_LAMBDA_MAP.put("annualizedReturn", Product::getAnnualizedReturn);
+        SORT_FIELD_LAMBDA_MAP.put("maxDrawdown", Product::getMaxDrawdown);
+        SORT_FIELD_LAMBDA_MAP.put("liquidity", Product::getLiquidity);
+        SORT_FIELD_LAMBDA_MAP.put("sharpeRatio", Product::getSharpeRatio);
+        SORT_FIELD_LAMBDA_MAP.put("feeRate", Product::getFeeRate);
+
+        // 公共字段（创建/更新时间、逻辑删除）
+        SORT_FIELD_LAMBDA_MAP.put("createTime", Product::getCreateTime);
+        SORT_FIELD_LAMBDA_MAP.put("updateTime", Product::getUpdateTime);
+        SORT_FIELD_LAMBDA_MAP.put("deleted", Product::getDeleted);
+    }
 
     // 新增：重写save方法，新增产品后插入申购记录
     @Override
@@ -93,7 +126,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     @Override
-    public PageResult<Product> pageList(Integer pageNum, Integer pageSize, String name, String type) {
+    public PageResult<Product> pageList(Integer pageNum, Integer pageSize, String name, String type,
+                                        String sortField, String sortDir) {
         Page<Product> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(name)) {
@@ -102,7 +136,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         if (StringUtils.hasText(type)) {
             wrapper.eq(Product::getType, type);
         }
-        wrapper.orderByDesc(Product::getCreateTime);
+
+        // 排序逻辑（Lambda方式）
+        if (StringUtils.hasText(sortField) && SORT_FIELD_LAMBDA_MAP.containsKey(sortField)) {
+            boolean isAsc = "asc".equalsIgnoreCase(sortDir);
+            SFunction<Product, ?> lambdaField = SORT_FIELD_LAMBDA_MAP.get(sortField);
+            if (isAsc) {
+                wrapper.orderByAsc(lambdaField);
+            } else {
+                wrapper.orderByDesc(lambdaField);
+            }
+        }
+
         this.page(page, wrapper);
         return new PageResult<>(page.getTotal(), page.getPages(), page.getCurrent(), page.getSize(), page.getRecords());
     }

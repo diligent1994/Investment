@@ -7,18 +7,24 @@ import com.dq.investment.service.ProfitRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * @author hasee
+ */
 @RestController
 @RequestMapping("/api/profit")
 public class ProfitRecordController {
     @Autowired
     private ProfitRecordService profitRecordService;
 
+    // 核心修改：新增sortField、sortDir参数
     @GetMapping("/page")
     public Result<PageResult<ProfitRecord>> pageList(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) Long productId) {
-        return Result.success(profitRecordService.pageList(pageNum, pageSize, productId));
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) String sortField, // 新增：排序字段（对应数据库列的驼峰名）
+            @RequestParam(defaultValue = "asc") String sortDir) { // 新增：排序方向（asc/desc，默认升序）
+        return Result.success(profitRecordService.pageList(pageNum, pageSize, productId, sortField, sortDir));
     }
 
     /**

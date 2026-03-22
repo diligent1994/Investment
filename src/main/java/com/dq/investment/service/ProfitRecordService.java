@@ -6,8 +6,11 @@ import com.dq.investment.entity.ProfitRecord;
 
 import java.util.List;
 
+/**
+ * @author hasee
+ */
 public interface ProfitRecordService extends IService<ProfitRecord> {
-    PageResult<ProfitRecord> pageList(Integer pageNum, Integer pageSize, Long productId);
+    PageResult<ProfitRecord> pageList(Integer pageNum, Integer pageSize, Long productId, String sortField, String sortDir);
 
     // 新增：保存记录并自动计算指标
     boolean saveWithCalculate(ProfitRecord profitRecord);
