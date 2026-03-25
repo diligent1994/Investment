@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/investment?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Redis配置（预留，暂时注释）
+    # redis:
+    #   host: localhost
+    #   port: 6379
+    #   password:
+    #   database: 0
+    #   timeout: 5000ms
+
