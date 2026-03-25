@@ -388,6 +388,7 @@ public class CalculateUtil {
         }
         BigDecimal profitAmount = profitRecord.getTotalAmount().subtract(investmentAmount);
         BigDecimal profitRate = profitAmount.divide(investmentAmount, 4, RoundingMode.HALF_UP);
+        profitRecord.setProfitAmount(profitAmount);
         profitRecord.setProfitRate(profitRate);
         product.setInvestAmount(investmentAmount);
     }

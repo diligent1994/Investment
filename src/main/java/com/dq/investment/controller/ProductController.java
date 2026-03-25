@@ -24,8 +24,8 @@ public class ProductController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String sortField, // 新增：排序字段
-            @RequestParam(defaultValue = "asc") String sortDir) { // 新增：排序方向
-        return Result.success(productService.pageList(pageNum, pageSize, name, type, sortField, sortDir));
+            @RequestParam(defaultValue = "asc") String sortOrder) { // 新增：排序方向
+        return Result.success(productService.pageList(pageNum, pageSize, name, type, sortField, sortOrder));
     }
 
     @PostMapping

@@ -4,6 +4,10 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+bootJar {
+    archiveFileName = 'app.jar'
+}
+
 group = 'com.dq'
 version = '0.0.1-SNAPSHOT'
 description = 'Investment'
@@ -52,4 +56,14 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// 处理资源文件：确保所有 yml 配置都被打包进 jar
+processResources {
+    // 关键：设置重复文件策略 = 排除重复（核心修复报错）
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // 仅对配置文件进行变量展开，不额外复制文件
+    filesMatching("application*.yml") {
+        expand(project.properties)
+    }
 }

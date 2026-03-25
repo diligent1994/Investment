@@ -23,8 +23,8 @@ public class ProfitRecordController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) String sortField, // 新增：排序字段（对应数据库列的驼峰名）
-            @RequestParam(defaultValue = "asc") String sortDir) { // 新增：排序方向（asc/desc，默认升序）
-        return Result.success(profitRecordService.pageList(pageNum, pageSize, productId, sortField, sortDir));
+            @RequestParam(defaultValue = "asc") String sortOrder) { // 新增：排序方向（asc/desc，默认升序）
+        return Result.success(profitRecordService.pageList(pageNum, pageSize, productId, sortField, sortOrder));
     }
 
     /**
