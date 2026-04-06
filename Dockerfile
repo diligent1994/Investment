@@ -1,12 +1,15 @@
 # 构建阶段
-# FROM gradle:8.5-jdk17 AS builder
-# WORKDIR /app
-# COPY build.gradle settings.gradle ./
-# COPY src ./src
-# RUN gradle bootJar --no-daemon
+FROM registry.cn-hangzhou.aliyuncs.com/docker-library/openjdk:17-jdk-alpine AS builder
+WORKDIR /app
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+COPY src src
+RUN chmod +x gradlew && ./gradlew bootJar
 
 # 运行阶段
-FROM eclipse-temurin:17-jre-alpine
+FROM registry.cn-hangzhou.aliyuncs.com/docker-library/openjdk:17-jre-alpine
 WORKDIR /app
 # 复制jar包到容器（注意jar包名称要和你的一致）
 COPY /build/libs/*.jar app.jar
