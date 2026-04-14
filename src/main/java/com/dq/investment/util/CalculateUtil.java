@@ -344,17 +344,10 @@ public class CalculateUtil {
      */
     public static ProfitRecord calculateSingleRecord(Product product, Long recordId, List<ProfitRecord> allRecords) {
         // 筛选出该记录之前的所有数据（含当前记录）
-        ProfitRecord targetRecord = null;
-        for (ProfitRecord record : allRecords) {
-            if (record.getId().equals(recordId)) {
-                targetRecord = record;
-                break;
-            }
-        }
+        ProfitRecord targetRecord = allRecords.stream().filter(record -> record.getId().equals(recordId)).findFirst().orElse(null);
         if (targetRecord == null) {
             return null;
         }
-        UpdateProductRecord(product, targetRecord);
         // 按日期筛选到当前记录的所有数据
         LocalDate targetDate = targetRecord.getRecordDate();
         List<ProfitRecord> recordsToTarget = allRecords.stream()
@@ -363,6 +356,7 @@ public class CalculateUtil {
 
         // 计算指标
         List<ProfitRecord> sortedRecords = CalculateUtil.sortRecordsByDate(recordsToTarget);
+        calculateProfitAndRate(product, targetRecord, sortedRecords);
         BigDecimal annualized = calculateAnnualizedReturnByRecords(sortedRecords);
         BigDecimal maxDrawdown = calculateMaxDrawdown(sortedRecords);
         BigDecimal sharpe = calculateSharpeRatio(annualized, sortedRecords);
@@ -375,21 +369,38 @@ public class CalculateUtil {
     }
 
     /**
-     * 更新产品持仓成本（用于计算收益）
+     * 【核心】计算单产品所有记录的 收益金额 + 收益率
+     *
+     * @param sortedList 该产品所有收益记录
      */
-    public static void UpdateProductRecord(Product product, ProfitRecord profitRecord) {
-        if (product == null || profitRecord == null) {
+    public static void calculateProfitAndRate(Product product, ProfitRecord targetRecord, List<ProfitRecord> sortedList) {
+        if (sortedList == null || sortedList.isEmpty()) {
             return;
         }
         // 申赎要改变持仓成本
-        BigDecimal investmentAmount = product.getInvestAmount();
-        if (!BigDecimal.ZERO.equals(profitRecord.getTransactionAmount())) {
-            investmentAmount = investmentAmount.add(profitRecord.getTransactionAmount());
+        BigDecimal investmentAmount = sortedList.stream()
+                // 提取每个元素的 transactionAmount，空值默认0（避免空指针）
+                .map(record -> record.getTransactionAmount() == null ? BigDecimal.ZERO : record.getTransactionAmount())
+                // 累加：初始值ZERO，累加器BigDecimal.add
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalAmt = targetRecord.getTotalAmount() == null ? BigDecimal.ZERO : targetRecord.getTotalAmount();
+
+        // 2.3 计算收益金额
+        BigDecimal profitAmount = totalAmt.subtract(investmentAmount);
+        targetRecord.setProfitAmount(profitAmount);
+        // 2.4 计算收益率（%）
+        BigDecimal profitRate = BigDecimal.ZERO;
+        //持仓为0，即全部赎回，取初始本金计算收益率
+        if (totalAmt.compareTo(BigDecimal.ZERO) == 0 || investmentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            BigDecimal investAmount = sortedList.get(0).getTransactionAmount();
+            profitRate = profitAmount.divide(investAmount, 4, RoundingMode.HALF_UP)
+                    .multiply(PERCENT);
+        } else {
+            profitRate = profitAmount.divide(investmentAmount, 4, RoundingMode.HALF_UP)
+                    .multiply(PERCENT);
         }
-        BigDecimal profitAmount = profitRecord.getTotalAmount().subtract(investmentAmount);
-        BigDecimal profitRate = profitAmount.divide(investmentAmount, 4, RoundingMode.HALF_UP);
-        profitRecord.setProfitAmount(profitAmount);
-        profitRecord.setProfitRate(profitRate);
+        targetRecord.setProfitRate(profitRate.setScale(4, RoundingMode.HALF_UP));
         product.setInvestAmount(investmentAmount);
     }
 

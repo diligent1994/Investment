@@ -97,8 +97,6 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
     public boolean saveWithCalculate(ProfitRecord profitRecord) {
         Long productId = profitRecord.getProductId();
         Product product = productMapper.selectById(productId);
-        //申赎要改变持仓成本
-        CalculateUtil.UpdateProductRecord(product, profitRecord);
 
         // 1. 保存当前记录
         boolean saveFlag = this.saveOrUpdate(profitRecord);
@@ -114,6 +112,8 @@ public class ProfitRecordServiceImpl extends ServiceImpl<ProfitRecordMapper, Pro
 
         // 3. 计算产品级指标
         List<ProfitRecord> sortedRecords = CalculateUtil.sortRecordsByDate(allRecords);
+        //申赎要改变持仓成本
+        CalculateUtil.calculateProfitAndRate(product, profitRecord, sortedRecords);
         BigDecimal annualized = CalculateUtil.calculateAnnualizedReturnByRecords(sortedRecords);
         BigDecimal maxDrawdown = CalculateUtil.calculateMaxDrawdown(sortedRecords);
         BigDecimal sharpe = CalculateUtil.calculateSharpeRatio(annualized, sortedRecords);
