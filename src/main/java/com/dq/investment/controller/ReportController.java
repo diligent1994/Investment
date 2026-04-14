@@ -37,12 +37,17 @@ public class ReportController {
         for (Product p : products) {
             LambdaQueryWrapper<ProfitRecord> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(ProfitRecord::getProductId, p.getId());
-            List<ProfitRecord> records = profitRecordService.list(wrapper);
+            // 核心：按recordDate降序排列（最大的日期排第一）
+            wrapper.orderByDesc(ProfitRecord::getRecordDate);
+            // 核心：数据库层限制只返回1条数据（性能最优）
+            wrapper.last("LIMIT 1");
+
+            // 2. 查询单条结果（无数据返回null，不会抛异常）
+            ProfitRecord latestRecord = profitRecordService.getOne(wrapper);
+
 
             // 累计收益
-            BigDecimal totalIncome = records.stream()
-                    .map(r -> r.getProfitAmount() == null ? BigDecimal.ZERO : r.getProfitAmount())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalIncome = latestRecord.getProfitAmount();
 
             // 多指标封装
             Map<String, Object> item = new HashMap<>();

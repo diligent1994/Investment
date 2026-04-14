@@ -383,6 +383,7 @@ public class CalculateUtil {
                 .map(record -> record.getTransactionAmount() == null ? BigDecimal.ZERO : record.getTransactionAmount())
                 // 累加：初始值ZERO，累加器BigDecimal.add
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        product.setInvestAmount(investmentAmount);
 
         BigDecimal totalAmt = targetRecord.getTotalAmount() == null ? BigDecimal.ZERO : targetRecord.getTotalAmount();
 
@@ -401,7 +402,6 @@ public class CalculateUtil {
                     .multiply(PERCENT);
         }
         targetRecord.setProfitRate(profitRate.setScale(4, RoundingMode.HALF_UP));
-        product.setInvestAmount(investmentAmount);
     }
 
     // ------------------- 测试用例验证 -------------------
