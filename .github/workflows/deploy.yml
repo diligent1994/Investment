@@ -23,7 +23,7 @@ jobs:
           context: .
           push: false
           load: true # 把构建好的镜像加载到本地docker环境
-          tags: springboot-backend:latest
+          tags: investment_backend:latest
 
       # ======================
       # 第二步：构建完成！才登录阿里云私有仓库
@@ -40,5 +40,5 @@ jobs:
       # ======================
       - name: Tag and push to Aliyun ACR
         run: |
-          docker tag springboot-backend:latest ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/springboot-backend:latest
-          docker push ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/springboot-backend:latest
+          docker tag investment_backend:latest ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/investment_backend:latest
+          docker push ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/investment_backend:latest
