@@ -2,7 +2,7 @@ name: Build and Push Backend to ACR
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build:
