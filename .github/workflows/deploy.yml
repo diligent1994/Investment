@@ -35,8 +35,8 @@ jobs:
           password: ${{ secrets.ALIYUN_PASSWORD }}
 
       # 打标签+推送（你的命令完全正确，不动）
+      #  docker login --username=${{ secrets.ALIYUN_USERNAME }} -p=${{ secrets.ALIYUN_PASSWORD }} ${{ secrets.ALIYUN_REGISTRY }}
       - name: Tag and push to Aliyun ACR
         run: |
-        #  docker login --username=${{ secrets.ALIYUN_USERNAME }} -p=${{ secrets.ALIYUN_PASSWORD }} ${{ secrets.ALIYUN_REGISTRY }}
           docker tag investment_backend:latest ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/investment_backend:latest
           docker push ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/investment_backend:latest
