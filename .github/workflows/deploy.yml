@@ -37,5 +37,6 @@ jobs:
       # 打标签+推送（你的命令完全正确，不动）
       - name: Tag and push to Aliyun ACR
         run: |
-          docker tag investment_backend:latest ${{ secrets.ALIYUN_REGISTRY }}/dengquin/investment_backend:latest
-          docker push ${{ secrets.ALIYUN_REGISTRY }}/dengquin/investment_backend:latest
+          docker login --username=diligent1992 -p=dqnl1215 crpi-sgkf8mp49u74uk3k.cn-hangzhou.personal.cr.aliyuncs.com
+          docker tag investment_backend:latest crpi-sgkf8mp49u74uk3k.cn-hangzhou.personal.cr.aliyuncs.com/dengquin/investment_backend:latest
+          docker push crpi-sgkf8mp49u74uk3k.cn-hangzhou.personal.cr.aliyuncs.com/dengquin/investment_backend:latest
