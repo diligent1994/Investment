@@ -40,5 +40,5 @@ jobs:
       # ======================
       - name: Tag and push to Aliyun ACR
         run: |
-          docker tag investment_backend:latest ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/investment_backend:latest
-          docker push ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/investment_backend:latest
+          docker tag investment_backend:latest ${{ secrets.ALIYUN_REGISTRY }}/dengquin/investment_backend:latest
+          docker push ${{ secrets.ALIYUN_REGISTRY }}/dengquin/investment_backend:latest
